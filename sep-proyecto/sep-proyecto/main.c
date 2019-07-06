@@ -186,6 +186,11 @@ void debounce_2(void){
 
 int main(void)
 {
+	///////////////////////////////////////
+	DDRC &= ~((1<<4)|(1<<5));	// all input; the I2C special pin functions overrule this anyways
+	PORTC &= ~((1<<4)|(1<<5));	// all pullups off; the breakout board has its own 1k pullups attached
+	///////////////////////////////////////
+	
 	DDRB &= ~(1 << BOTON_PINZAS_2);
 	DDRC &= ~(1 << BOTON_PINZAS);
 	
