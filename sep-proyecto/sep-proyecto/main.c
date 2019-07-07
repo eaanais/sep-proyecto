@@ -1,7 +1,7 @@
 #define F_CPU 16000000UL //16Mhz
 
 //boton placa
-#define BOTON_PINZAS 5
+#define BOTON_PINZAS 0
 #define BOTON_PINZAS_2 1
 
 #include <avr/io.h>
@@ -33,13 +33,15 @@ int reinicio = 0;
 #include "TMP102/TMP102.h"
 #include "DHT22/dhtxx.h"
 
-volatile uint8_t temp_ext = 0;
+volatile uint8_t temp_int = 0;
 volatile uint8_t item = 0;
 volatile uint8_t dtem = 0;
 volatile uint8_t ihum = 0;
 volatile uint8_t dhum = 0;
 volatile uint8_t ipr = 0;
 volatile uint8_t dpr = 0;
+volatile uint8_t min;
+volatile uint8_t max;
 	
 char buffer[10];
 
@@ -57,7 +59,7 @@ float dew_point(float T, float H){
 void get_data(void){
 	int temp, humid;
 	
-	temp_ext = tmp102Read();
+	temp_int = tmp102Read();
 	
 	dhtxxconvert( DHTXX_DHT22, &PORTC, &DDRC, &PINC, ( 1 << 3 ) );
 
@@ -66,7 +68,19 @@ void get_data(void){
 	//Read data from sensor to variables `temp` and `humid` (`ec` is exit code)
 	dhtxxread( DHTXX_DHT22, &PORTC, &DDRC, &PINC, ( 1 << 3 ), &temp, &humid );
 
+
 	item = temp / 10;
+	
+	if (item > max)
+	{
+		max = item;
+	}
+	else if (item < min)
+	{
+		min = item;
+	}
+	
+	
 	dtem = temp % 10;
 	float T = item + dtem/10;
 	
@@ -85,57 +99,61 @@ void print_data(void){
 		case 0:{
 			clearScreen();
 			setCursor(0,0);
-			Send_A_String("Temperatura interior: ");
-			itoa(temp_ext, buffer, 10);
-			Send_A_String(buffer);
+			Send_A_String("T interior: ");
+			setCursor(1,0);
+			Send_An_Integer(temp_int);
+			//itoa(temp_int, buffer, 10);
+			//Send_A_String(buffer);
 			Send_A_String("C");
 			break;
 		}
 		case 1:{
 			clearScreen();
 			setCursor(0,0);
-			Send_A_String("Temperatura exterior: ");
-			itoa(item, buffer, 10);
-			Send_A_String(buffer);
+			Send_A_String("T exterior: ");
+			setCursor(1,0);
+			Send_An_Integer(item);
 			Send_A_String(".");
-			itoa(dtem, buffer, 10);
-			Send_A_String(buffer);
+			Send_An_Integer(dtem);
 			Send_A_String("C");
 			break;
 		}
 		case 2:{
 			clearScreen();
 			setCursor(0,0);
-			Send_A_String("Temperatura exterior: ");
-			itoa(ihum, buffer, 10);
-			Send_A_String(buffer);
+			Send_A_String("Humedad: ");
+			setCursor(1,0);
+			Send_An_Integer(ihum);
 			Send_A_String(".");
-			itoa(dhum, buffer, 10);
-			Send_A_String(buffer);
-			Send_A_String("C");
+			Send_An_Integer(dhum);
+			Send_A_String("%");
 			break;
 		}
 		case 3:{
 			clearScreen();
 			setCursor(0,0);
-			Send_A_String("Temperatura exterior: ");
-			itoa(ipr, buffer, 10);
-			Send_A_String(buffer);
+			Send_A_String("Pto. Rocio: ");
+			setCursor(1,0);
+			Send_An_Integer(ipr);
 			Send_A_String(".");
-			itoa(dpr, buffer, 10);
-			Send_A_String(buffer);
+			Send_An_Integer(dpr);
 			Send_A_String("C");
 			break;
 		}
 		case 4:{
 			clearScreen();
 			setCursor(0,0);
-			Send_A_String("Temperatura maxima/minima: ");
+			Send_A_String("T max/min: ");
+			setCursor(1,0);
+			Send_An_Integer(max);
+			Send_A_String("C/");
+			Send_An_Integer(min);
+			Send_A_String("C");
 			break;
 		}
 	}
-	setCursor(1,0);
-	Send_An_Integer(segundos);
+	//setCursor(1,0);
+	//Send_An_Integer(segundos);
 }
 /////////////
 
@@ -200,23 +218,31 @@ int main(void)
 	
 	
 	PCMSK0 |= (1<<PCINT1); //funcion adicional del puerto b pin 7
-	PCMSK1 |= (1 << PCINT13);   // set PCINT13 to trigger an interrupt on state change (pin pc5 (SW5 button))
+	PCMSK1 |= (1 << PCINT8);   // set PCINT13 to trigger an interrupt on state change (pin pc5 (SW5 button))
 	
 	
 	PCICR |= (1<<PCIE0); //habilitar la interrupcion
 	PCICR |= (1 << PCIE1);     // set PCIE0 to enable PCMSK1 scan (PORTC)
 
 	i2cInit();
+	TIMER_Init();
 
     start();
 	
 	sei(); //habilita las interrupciones globales
 	
+	get_data();
+	
+	min = item;
+	max = item;
 
     /* Replace with your application code */
     while (1) 
     {
-		//debounce();
+		get_data();
+		//print_data();
+		//_delay_ms(100);
+		/*/debounce();
 		if (Contador == 0)
 		{
 			cli();
@@ -254,16 +280,31 @@ int main(void)
 			sei();
 		}
 		
-		_delay_ms(100);
+		_delay_ms(100);*/
     }
 }
 
 ISR(PCINT0_vect){
-	if (button_down_2) Contador++;
+	if (button_down_2){ 
+		Contador++;
+		if (Contador > 4)
+		{
+			Contador = 0;
+		}
+		button_down_2 = 0;
+	}
+	
 }
 
 ISR(PCINT1_vect){
-	if (button_down) Contador--;
+	if (button_down){
+		 Contador--;
+		 if (Contador < 0)
+		 {
+			 Contador = 4;
+		 }
+		 button_down = 0;
+	}
 }
 
 ISR (TIMER2_COMPA_vect)
@@ -353,9 +394,11 @@ ISR (TIMER0_COMPA_vect)
 ISR (TIMER1_COMPA_vect)  // timer0 overflow interrupt
 {
 	segundos++;
+	print_data();
 	if (segundos >= 60)
 	{
-		print_data();
+		min = item;
+		max = item;
 		minutos++;
 		if (minutos >= 60)
 		{
@@ -363,6 +406,8 @@ ISR (TIMER1_COMPA_vect)  // timer0 overflow interrupt
 			if (horas >= 24)
 			{
 				/*agregar funciona para resetear el dia*/
+				min = item;
+				max = item;
 				horas = 0;
 			}
 			
