@@ -63,7 +63,6 @@ Common symbol       size              file
 dmax                0x1               main.o
 dmin                0x1               main.o
 imax                0x1               main.o
-buffer              0xa               main.o
 imin                0x1               main.o
 button_down         0x1               main.o
 button_down_2       0x1               main.o
@@ -106,12 +105,6 @@ Discarded input sections
  .text          0x00000000        0x0 main.o
  .data          0x00000000        0x0 main.o
  .bss           0x00000000        0x0 main.o
- .bss.reinicio  0x00000000        0x2 main.o
- .data.refresco
-                0x00000000        0x2 main.o
- .bss.sumador_display
-                0x00000000        0x2 main.o
- .bss.sumador   0x00000000        0x2 main.o
  .bss.Habilitador
                 0x00000000        0x2 main.o
  .text          0x00000000        0x0 TIMER/TIMER.o
@@ -555,18 +548,18 @@ END GROUP
  .text.get_data
                 0x0000067c      0x1a0 main.o
                 0x0000067c                get_data
- .text.print_data
-                0x0000081c      0x180 main.o
-                0x0000081c                print_data
- .text.debounce
-                0x0000099c       0x1e main.o
-                0x0000099c                debounce
- .text.debounce_2
-                0x000009ba       0x1e main.o
-                0x000009ba                debounce_2
  .text.startup.main
-                0x000009d8       0x98 main.o
-                0x000009d8                main
+                0x0000081c       0x98 main.o
+                0x0000081c                main
+ .text.print_data
+                0x000008b4      0x180 main.o
+                0x000008b4                print_data
+ .text.debounce
+                0x00000a34       0x1e main.o
+                0x00000a34                debounce
+ .text.debounce_2
+                0x00000a52       0x1e main.o
+                0x00000a52                debounce_2
  .text.__vector_3
                 0x00000a70       0x4e main.o
                 0x00000a70                __vector_3
@@ -709,13 +702,13 @@ END GROUP
                 0x00800146                _edata = .
                 0x00800146                PROVIDE (__data_end, .)
 
-.bss            0x00800146       0x1e
+.bss            0x00800146       0x14
                 0x00800146                PROVIDE (__bss_start, .)
  *(.bss)
  *(.bss*)
- .bss.count_2.2006
+ .bss.count_2.2012
                 0x00800146        0x1 main.o
- .bss.count.2000
+ .bss.count.2006
                 0x00800147        0x1 main.o
  .bss.dpr       0x00800148        0x1 main.o
                 0x00800148                dpr
@@ -740,23 +733,22 @@ END GROUP
  .bss.Contador  0x00800152        0x2 main.o
                 0x00800152                Contador
  *(COMMON)
- COMMON         0x00800154       0x10 main.o
+ COMMON         0x00800154        0x6 main.o
                 0x00800154                dmax
                 0x00800155                dmin
                 0x00800156                imax
-                0x00800157                buffer
-                0x00800161                imin
-                0x00800162                button_down
-                0x00800163                button_down_2
-                0x00800164                PROVIDE (__bss_end, .)
+                0x00800157                imin
+                0x00800158                button_down
+                0x00800159                button_down_2
+                0x0080015a                PROVIDE (__bss_end, .)
                 0x000012ee                __data_load_start = LOADADDR (.data)
                 0x00001334                __data_load_end = (__data_load_start + SIZEOF (.data))
 
-.noinit         0x00800164        0x0
+.noinit         0x0080015a        0x0
                 [!provide]                PROVIDE (__noinit_start, .)
  *(.noinit*)
                 [!provide]                PROVIDE (__noinit_end, .)
-                0x00800164                _end = .
+                0x0080015a                _end = .
                 [!provide]                PROVIDE (__heap_start, .)
 
 .eeprom         0x00810000        0x0

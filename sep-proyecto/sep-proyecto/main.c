@@ -5,8 +5,15 @@
 #define BOTON_PINZAS_2 1
 
 #include <avr/io.h>
-#include <util/delay.h>
 #include <avr/interrupt.h>
+#include <util/delay.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <math.h>
+
+#include "I2C/I2C_implement_me.h"
+#include "TMP102/TMP102.h"
+#include "DHT22/dhtxx.h"
 #include "TIMER/TIMER.h"
 #include "lcd.h"
 
@@ -20,19 +27,6 @@ uint8_t segundos = 0;
 uint8_t minutos = 0;
 uint8_t horas = 0;
 
-uint16_t sumador = 0;
-uint16_t sumador_display = 0;
-int refresco = 1;
-int reinicio = 0;
-
-////////////
-#include <stdlib.h>
-#include <stdbool.h>
-#include <math.h>
-#include "I2C/I2C_implement_me.h"
-#include "TMP102/TMP102.h"
-#include "DHT22/dhtxx.h"
-
 volatile uint8_t temp_int = 0;
 volatile uint8_t item = 0;
 volatile uint8_t dtem = 0;
@@ -44,11 +38,58 @@ volatile uint8_t imin;
 volatile uint8_t dmin;
 volatile uint8_t imax;
 volatile uint8_t dmax;
-	
-char buffer[10];
 
-void f1(void);
-void f2(void);
+
+float dew_point(float T, float H);
+
+void get_data(void);
+
+void print_data(void);
+
+void debounce(void);
+
+void debounce_2(void);
+
+int main(void)
+{
+	DDRC &= ~((1<<4)|(1<<5));	// I2C SCA, SCL inputs
+	PORTC &= ~((1<<4)|(1<<5));	// I2C SCA, SCL pull-up off
+	
+	DDRB &= ~(1 << BOTON_PINZAS_2);
+	DDRC &= ~(1 << BOTON_PINZAS);
+	
+	//activo el pull-up combinando el pin en SALIDA y con PORTB high
+	PORTC |= (1 << BOTON_PINZAS);
+	PORTB |= (1 << BOTON_PINZAS_2);
+	
+	
+	PCMSK0 |= (1<<PCINT1); //funcion adicional del puerto b pin 7
+	PCMSK1 |= (1 << PCINT8);   // set PCINT13 to trigger an interrupt on state change (pin pc5 (SW5 button))
+	
+	
+	PCICR |= (1<<PCIE0); //habilitar la interrupcion
+	PCICR |= (1 << PCIE1);     // set PCIE0 to enable PCMSK1 scan (PORTC)
+
+	_delay_ms(200);
+
+	i2cInit();
+	TIMER_Init();
+    start();
+	
+	get_data();
+	imin = item;
+	dmin = dtem;
+	imax = item;
+	dmax = dtem;
+	
+	_delay_ms(200);
+	sei();
+
+    while (1) 
+    {
+		get_data();
+    }
+}
 
 float dew_point(float T, float H){
 	float b = 18.678;
@@ -71,22 +112,22 @@ void get_data(void){
 	item = temp / 10;
 	dtem = temp % 10;
 	float T = item + dtem/10;
-		
+	
 	if (temp > (imax*10 + dmax)) {
 		imax = item;
 		dmax = dtem;
-		}
+	}
 	else if (temp < (imin*10 + dmin)){
 		imin = item;
 		dmin = dtem;
-		}
+	}
 	
 
 	ihum = humid / 10;
 	dhum = humid % 10;
 	float H = ihum + dhum/10;
 	
-		
+	
 	float pr = dew_point(T, H);
 	ipr = pr;
 	dpr = pr * 10 - ipr * 10;
@@ -154,8 +195,6 @@ void print_data(void){
 	}
 }
 
-//////////
-
 void debounce(void){
 	static uint8_t count = 0;
 	static uint8_t button_state = 1;
@@ -172,8 +211,8 @@ void debounce(void){
 			}
 			count = 0;
 		}
-	} else {
-	// Reset counter
+		} else {
+		// Reset counter
 		count = 0;
 	}
 }
@@ -198,50 +237,6 @@ void debounce_2(void){
 		// Reset counter
 		count_2 = 0;
 	}
-}
-
-
-int main(void)
-{
-	///////////////////////////////////////
-	DDRC &= ~((1<<4)|(1<<5));	// all input; the I2C special pin functions overrule this anyways
-	PORTC &= ~((1<<4)|(1<<5));	// all pullups off; the breakout board has its own 1k pullups attached
-	///////////////////////////////////////
-	
-	DDRB &= ~(1 << BOTON_PINZAS_2);
-	DDRC &= ~(1 << BOTON_PINZAS);
-	
-	//activo el pull-up combinando el pin en SALIDA y con PORTB high
-	PORTC |= (1 << BOTON_PINZAS);
-	PORTB |= (1 << BOTON_PINZAS_2);
-	
-	
-	PCMSK0 |= (1<<PCINT1); //funcion adicional del puerto b pin 7
-	PCMSK1 |= (1 << PCINT8);   // set PCINT13 to trigger an interrupt on state change (pin pc5 (SW5 button))
-	
-	
-	PCICR |= (1<<PCIE0); //habilitar la interrupcion
-	PCICR |= (1 << PCIE1);     // set PCIE0 to enable PCMSK1 scan (PORTC)
-
-	_delay_ms(200);
-
-	i2cInit();
-	TIMER_Init();
-    start();
-	
-	get_data();
-	imin = item;
-	dmin = dtem;
-	imax = item;
-	dmax = dtem;
-	
-	_delay_ms(200);
-	sei();
-
-    while (1) 
-    {
-		get_data();
-    }
 }
 
 ISR(PCINT0_vect){
