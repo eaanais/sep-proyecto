@@ -36,18 +36,18 @@ void command(char LcdCommand)  // Basic function used in giving command
 	PORTD |= UpperHalf;
 	PORTD &= ~(1<<rs);
 	PORTD |= (1<<en);
-	_delay_ms(1);
+	_delay_ms(5);
 	PORTD &= ~(1<<en);
-	_delay_ms(1);
+	_delay_ms(5);
 	
 	LowerHalf = ((LcdCommand<<4) & 0xF0); //lower 4 bits of command
 	PORTD &= 0x0F;                  // flushes upper half of PortD to 0, but retains lower half of PortD
 	PORTD |= LowerHalf;
 	PORTD &= ~(1<<rs);
 	PORTD |= (1<<en);
-	_delay_ms(1);
+	_delay_ms(5);
 	PORTD &= ~(1<<en);
-	_delay_ms(1);
+	_delay_ms(5);
 }
 
 void data(char AsciiChar)    // Basic function used in giving data
@@ -61,7 +61,7 @@ void data(char AsciiChar)    // Basic function used in giving data
 	PORTD |= (1<<en);
 	_delay_ms(1);
 	PORTD &= ~(1<<en);
-	_delay_us(100);
+	_delay_us(50);
 	
 	LowerHalf = ((AsciiChar<<4) & 0xF0); //lower 4 bits of data
 	PORTD &= 0x0F;       // flushes upper half of PortD to 0, but retains lower half of PortD
@@ -70,7 +70,7 @@ void data(char AsciiChar)    // Basic function used in giving data
 	PORTD |= (1<<en);
 	_delay_ms(1);
 	PORTD &= ~(1<<en);
-	_delay_us(100);
+	_delay_us(50);
 }
 
 

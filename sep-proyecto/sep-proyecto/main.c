@@ -40,8 +40,10 @@ volatile uint8_t ihum = 0;
 volatile uint8_t dhum = 0;
 volatile uint8_t ipr = 0;
 volatile uint8_t dpr = 0;
-volatile uint8_t min;
-volatile uint8_t max;
+volatile uint8_t imin;
+volatile uint8_t dmin;
+volatile uint8_t imax;
+volatile uint8_t dmax;
 	
 char buffer[10];
 
@@ -62,28 +64,24 @@ void get_data(void){
 	temp_int = tmp102Read();
 	
 	dhtxxconvert( DHTXX_DHT22, &PORTC, &DDRC, &PINC, ( 1 << 3 ) );
-
 	_delay_ms( 1000 );
-
-	//Read data from sensor to variables `temp` and `humid` (`ec` is exit code)
 	dhtxxread( DHTXX_DHT22, &PORTC, &DDRC, &PINC, ( 1 << 3 ), &temp, &humid );
 
 
 	item = temp / 10;
-	
-	if (item > max)
-	{
-		max = item;
-	}
-	else if (item < min)
-	{
-		min = item;
-	}
-	
-	
 	dtem = temp % 10;
 	float T = item + dtem/10;
+		
+	if (temp > (imax*10 + dmax)) {
+		imax = item;
+		dmax = dtem;
+		}
+	else if (temp < (imin*10 + dmin)){
+		imin = item;
+		dmin = dtem;
+		}
 	
+
 	ihum = humid / 10;
 	dhum = humid % 10;
 	float H = ihum + dhum/10;
@@ -102,8 +100,6 @@ void print_data(void){
 			Send_A_String("T interior: ");
 			setCursor(1,0);
 			Send_An_Integer(temp_int);
-			//itoa(temp_int, buffer, 10);
-			//Send_A_String(buffer);
 			Send_A_String("C");
 			break;
 		}
@@ -145,17 +141,20 @@ void print_data(void){
 			setCursor(0,0);
 			Send_A_String("T max/min: ");
 			setCursor(1,0);
-			Send_An_Integer(max);
+			Send_An_Integer(imax);
+			Send_A_String(".");
+			Send_An_Integer(dmax);
 			Send_A_String("C/");
-			Send_An_Integer(min);
+			Send_An_Integer(imin);
+			Send_A_String(".");
+			Send_An_Integer(dmin);
 			Send_A_String("C");
 			break;
 		}
 	}
-	//setCursor(1,0);
-	//Send_An_Integer(segundos);
 }
-/////////////
+
+//////////
 
 void debounce(void){
 	static uint8_t count = 0;
@@ -224,63 +223,24 @@ int main(void)
 	PCICR |= (1<<PCIE0); //habilitar la interrupcion
 	PCICR |= (1 << PCIE1);     // set PCIE0 to enable PCMSK1 scan (PORTC)
 
+	_delay_ms(200);
+
 	i2cInit();
 	TIMER_Init();
-
     start();
 	
-	sei(); //habilita las interrupciones globales
-	
 	get_data();
+	imin = item;
+	dmin = dtem;
+	imax = item;
+	dmax = dtem;
 	
-	min = item;
-	max = item;
+	_delay_ms(200);
+	sei();
 
-    /* Replace with your application code */
     while (1) 
     {
 		get_data();
-		//print_data();
-		//_delay_ms(100);
-		/*/debounce();
-		if (Contador == 0)
-		{
-			cli();
-			setCursor(1,0);
-			Send_An_Integer(segundos);
-			sei();
-
-		}
-		else if (Contador == 1)
-		{
-			cli();
-			setCursor(1,0);
-			Send_An_Integer(segundos);
-			sei();
-		}
-		else if (Contador == 2)
-		{
-			cli();
-			setCursor(1,0);
-			Send_An_Integer(segundos);
-			sei();
-		}
-		else if (Contador == 3)
-		{
-			cli();
-			setCursor(1,0);
-			Send_An_Integer(segundos);
-			sei();
-		}
-		else
-		{
-			cli();
-			setCursor(1,0);
-			Send_An_Integer(segundos);
-			sei();
-		}
-		
-		_delay_ms(100);*/
     }
 }
 
@@ -313,92 +273,16 @@ ISR (TIMER2_COMPA_vect)
 	debounce_2();
 }
 
-ISR (TIMER0_COMPA_vect)
-{
-	/*timer disponible*/
-	/*if (sumador <=999)
-	{
-		int a = (int)(sumador/100);
-		int b = (int)(sumador/10-(int)(sumador/100)*10);
-		int c = (int)(sumador-(int)(sumador/100)*100-((int)(sumador/10)-(int)(sumador/100)*10)*10);
-
-		switch (refresco)
-		{
-			case 1:
-			SIETE_SEG(a,refresco);
-			refresco++;
-			break;
-			case 2:
-			SIETE_SEG(b,refresco);
-			refresco++;
-			break;
-			case 3:
-			SIETE_SEG(c,refresco);
-			refresco++;
-			break;
-			case 4:
-			SIETE_SEG(10,3);
-			refresco=1;
-			break;
-		}// action to be done every 250 usec
-	}
-	else if (sumador<=9999)
-	{
-		sumador_display = sumador/10;
-		int a = (int)(sumador_display/100);
-		int b = (int)(sumador_display/10-(int)(sumador_display/100)*10);
-		int c = (int)(sumador_display-(int)(sumador_display/100)*100-((int)(sumador_display/10)-(int)(sumador_display/100)*10)*10);
-		
-		
-		switch (refresco)
-		{
-			case 1:
-			SIETE_SEG(a,refresco);
-			refresco++;
-			break;
-			case 2:
-			SIETE_SEG(10,1);
-			refresco++;
-			break;
-			case 3:
-			SIETE_SEG(b,refresco-1);
-			refresco++;
-			break;
-			case 4:
-			SIETE_SEG(c,refresco-1);
-			refresco=1;
-			break;
-		}// action to be do
-	}
-	else 
-	{
-		switch (refresco)
-		{
-			case 1:
-			SIETE_SEG(11,refresco);
-			refresco++;
-			break;
-			case 2:
-			SIETE_SEG(12,refresco);
-			refresco++;
-			break;
-			case 3:
-			SIETE_SEG(12,refresco);
-			refresco=1;
-			break;
-		}// action to
-	}
-	*/
-}
-
 ISR (TIMER1_COMPA_vect)  // timer0 overflow interrupt
 {
 	segundos++;
 	print_data();
 	if (segundos >= 60)
 	{
-		min = item;
-		max = item;
+		imin = item;
+		dmin = dtem;
+		imax = item;
+		dmax = dtem;
 		minutos++;
 		if (minutos >= 60)
 		{
@@ -406,8 +290,10 @@ ISR (TIMER1_COMPA_vect)  // timer0 overflow interrupt
 			if (horas >= 24)
 			{
 				/*agregar funciona para resetear el dia*/
-				min = item;
-				max = item;
+				imin = item;
+				dmin = dtem;
+				imax = item;
+				dmax = dtem;
 				horas = 0;
 			}
 			

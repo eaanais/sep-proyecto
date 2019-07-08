@@ -21,11 +21,4 @@ void TIMER_Init(void)
 	TCCR2B |= (1 << CS12) | (1 << CS10);
 	// set prescaler to 64 and starts PWM
 	
-	// Set the Timer Mode to CTC
-	TCCR0A |= (1 << WGM01);
-	// Set the value that you want to count to
-	OCR0A = 62;
-	TIMSK0 |= (1 << OCIE0A);    //Set the ISR COMPA vect
-	TCCR0B |= (1 << CS02);
-	// set prescaler to 256 and start the timer
 }
